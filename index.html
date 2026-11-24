@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b5c75" />
+  <meta name="description" content="Ruang latihan TKA Bahasa Indonesia Kelas VI - Pemahaman Tekstual." />
+  <title>TKA Bahasa Indonesia | Pemahaman Tekstual</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="config.js"></script>
+  <script src="questions.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Beranda" onclick="location.reload();return false;">
+        <span class="brand-mark">T</span>
+        <span><strong>Ruang TKA</strong><small>Bahasa Indonesia · Kelas VI</small></span>
+      </a>
+      <div class="topbar-right">
+        <span id="modePill" class="mode-pill">Mode lokal</span>
+        <button class="ghost-btn" id="homeBtn" type="button" title="Kembali ke beranda">Beranda</button>
+      </div>
+    </header>
+
+    <main id="appRoot" class="main-content" aria-live="polite">
+      <section class="loading-card">
+        <div class="spinner"></div>
+        <p>Menyiapkan ruang belajar…</p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Ruang TKA · Pemahaman Tekstual</span>
+      <span>Belajar dengan bukti, berpikir dengan alasan.</span>
+    </footer>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
