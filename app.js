@@ -3,6 +3,7 @@
   const $ = (s, root=document) => root.querySelector(s);
   const ROOT = $('#appRoot');
   const LS_KEY = 'ruang_tka_attempts_v1';
+  const LEARN_KEY = 'ruang_tka_learning_progress_v1';
   const DEMO_USER = 'guru';
   const DEMO_PASS = 'GuruTKA61!';
   const COMPETENCIES = [
@@ -50,13 +51,17 @@
           <div class="eyebrow">Ruang latihan mandiri · TKA SD/MI</div>
           <h1>Pahami teksnya.<br>Temukan buktinya. Bangun alasanmu.</h1>
           <p>Latihan interaktif Bahasa Indonesia Kelas VI untuk kompetensi Pemahaman Tekstual. Setiap sesi berisi 30 soal acak dari 60 bank soal, lengkap dengan umpan balik dan pembahasan.</p>
-          <div class="hero-actions"><button class="btn btn-primary" id="heroStudent">Mulai latihan murid <span aria-hidden="true">→</span></button><button class="btn btn-outline" id="heroTeacher">Masuk ruang guru</button></div>
+          <div class="hero-actions"><button class="btn btn-primary" id="heroStudent">Mulai latihan murid <span aria-hidden="true">→</span></button><button class="btn btn-outline" id="heroLearn">Pelajari materi</button><button class="btn btn-outline" id="heroTeacher">Masuk ruang guru</button></div>
         </div>
         <div class="hero-visual"><div class="hero-orbit"><div class="hero-book"><b>30</b><span>SOAL ACAK</span><small>60 BANK SOAL<br>4 SUBKOMPETENSI</small></div></div></div>
       </section>
       <div class="section-heading"><div><h2>Empat kemampuan yang dilatih</h2><p>Setiap sesi mengambil soal dari seluruh subkompetensi.</p></div><span class="tiny">Kelas VI · Pemahaman Tekstual</span></div>
       <section class="skill-list">
         ${COMPETENCIES.map((c,i)=>`<div class="skill-item"><span>SUBKOMPETENSI 0${i+1}</span><strong>${esc(c.label)}</strong></div>`).join('')}
+      </section>
+      <div class="section-heading"><div><h2>Materi belajar mandiri</h2><p>Pelajari konsep, ikuti contoh bertahap, lalu uji pemahaman melalui cek interaktif.</p></div><button class="btn btn-secondary btn-small" id="homeLearnAll">Buka semua materi →</button></div>
+      <section class="lesson-card-grid">
+        ${(window.LEARNING_MODULES||[]).map(m=>`<button class="lesson-home-card" data-open-lesson="${m.id}"><span class="lesson-number">${m.number}</span><span class="lesson-home-copy"><b>${esc(m.title)}</b><small>${esc(m.subtitle)}</small></span><span class="arrow">›</span></button>`).join('')}
       </section>
       <div class="section-heading"><div><h2>Belajar dengan proses berpikir</h2><p>Bukan hanya mengejar skor, tetapi memahami alasan di balik jawaban.</p></div></div>
       <section class="card-grid">
@@ -70,13 +75,56 @@
         <button class="mode-card" id="teacherCard"><div><h3>🧑‍🏫 Ruang Guru</h3><p>Lihat progres kelas, analisis subkompetensi, detail jawaban, dan unduh hasil.</p></div><span class="arrow">›</span></button>
       </section>
       ${!cloudMode?`<div class="hint-box"><strong>Mode saat ini: lokal.</strong> Aplikasi dapat dicoba langsung pada perangkat ini. Agar hasil dari perangkat murid yang berbeda masuk ke dasbor guru, hubungkan aplikasi ke Supabase menggunakan petunjuk di README dan file SQL yang disertakan.</div>`:`<div class="hint-box"><strong>Sinkronisasi daring aktif.</strong> Hasil murid dapat dikirim dengan kode kelas/guru dan dibaca oleh akun guru yang membuat kode tersebut.</div>`}`;
-    $('#heroStudent').onclick=renderStudentForm;$('#studentCard').onclick=renderStudentForm;$('#heroTeacher').onclick=renderTeacherLogin;$('#teacherCard').onclick=renderTeacherLogin;
+    $('#heroStudent').onclick=renderStudentForm;$('#studentCard').onclick=renderStudentForm;$('#heroTeacher').onclick=renderTeacherLogin;$('#teacherCard').onclick=renderTeacherLogin;$('#heroLearn').onclick=renderLearningHome;$('#homeLearnAll').onclick=renderLearningHome;ROOT.querySelectorAll('[data-open-lesson]').forEach(b=>b.onclick=()=>renderLearningModule(b.dataset.openLesson));
+  }
+
+  function readLearningState(){try{return JSON.parse(localStorage.getItem(LEARN_KEY)||'{"completed":[],"checks":{}}')}catch{return {completed:[],checks:{}};}}
+  function writeLearningState(state){localStorage.setItem(LEARN_KEY,JSON.stringify(state));}
+  function renderLearningHome(){
+    stopTimer();currentQuiz=null;const modules=window.LEARNING_MODULES||[];const state=readLearningState();const done=modules.filter(m=>state.completed.includes(m.id)).length;const pct=modules.length?Math.round(done/modules.length*100):0;
+    ROOT.innerHTML=`<div class="learning-head"><div><div class="eyebrow" style="color:#0b8791">Ruang Belajar · Pemahaman Tekstual</div><h1>Pelajari materinya, pahami cara berpikirnya.</h1><p>Empat modul mengikuti kisi-kisi TKA. Setiap modul berisi penjelasan, contoh dengan pembahasan, strategi menjawab, pertanyaan refleksi, dan cek pemahaman interaktif.</p></div><div class="learning-progress-card"><span>Progres belajar</span><strong>${done}/${modules.length}</strong><div class="mini-track"><div class="mini-fill" style="width:${pct}%"></div></div><small>${pct}% modul ditandai selesai di perangkat ini</small></div></div>
+      <div class="learning-note"><b>Urutan belajar yang disarankan</b><span>Pelajari Modul 1 sampai 4. Kerjakan cek pemahaman di setiap modul, lalu lanjutkan ke latihan 30 soal acak dari bank 60 soal.</span></div>
+      <section class="lesson-home-grid">${modules.map(m=>{const complete=state.completed.includes(m.id);return `<article class="lesson-home-item"><div class="lesson-home-top"><span class="lesson-number">${m.number}</span><span class="lesson-status ${complete?'done':''}">${complete?'✓ Selesai':'Belum selesai'}</span></div><h2>${esc(m.title)}</h2><p>${esc(m.subtitle)}</p><div class="lesson-meta"><span>📖 ${m.sections.length} bagian</span><span>⏱ ${esc(m.duration)}</span><span>✏️ ${m.checks.length} cek pemahaman</span></div><button class="btn ${complete?'btn-secondary':'btn-primary'}" data-module-start="${m.id}">${complete?'Pelajari / ulangi':'Mulai belajar'} →</button></article>`}).join('')}</section>
+      <div class="learning-bottom-actions"><button class="btn btn-secondary" id="learningBackHome">← Beranda</button><button class="btn btn-primary" id="learningStartQuiz">Saya siap, mulai 30 soal acak →</button></div>`;
+    ROOT.querySelectorAll('[data-module-start]').forEach(b=>b.onclick=()=>renderLearningModule(b.dataset.moduleStart));$('#learningBackHome').onclick=renderHome;$('#learningStartQuiz').onclick=renderStudentForm;
+  }
+  function renderLearningModule(id){
+    stopTimer();currentQuiz=null;const modules=window.LEARNING_MODULES||[];const module=modules.find(m=>m.id===id);if(!module){renderLearningHome();return;}const state=readLearningState();const index=modules.findIndex(m=>m.id===id);const prev=modules[index-1],next=modules[index+1];
+    const checkHtml=module.checks.map((q,qi)=>{
+      const key=`${module.id}-${qi}`,old=state.checks[key];let inputs='';
+      if(q.type==='category'){
+        inputs=`<div class="learn-check-table"><table><thead><tr><th>Pernyataan</th><th>Pilih jawaban</th></tr></thead><tbody>${q.statements.map((st,i)=>`<tr><td>${esc(st)}</td><td><select data-check-row="${i}"><option value="">Pilih…</option>${q.categoryOptions.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>`;
+      } else {
+        inputs=`<div class="learn-check-options">${q.options.map((o,i)=>{const letter=String.fromCharCode(65+i);return `<label class="learn-check-option"><input type="${q.type==='mcma'?'checkbox':'radio'}" name="learn-${key}" value="${letter}"><span class="learn-option-letter">${letter}</span><span>${esc(o)}</span></label>`}).join('')}</div><small class="learn-check-hint">${q.type==='mcma'?'Pilih semua jawaban yang benar.':'Pilih satu jawaban paling tepat.'}</small>`;
+      }
+      return `<article class="learn-check-card" data-check-card="${key}"><div class="learn-check-title"><span>CEK PEMAHAMAN ${qi+1}</span><span class="tag ${q.type==='mcma'?'mcma':q.type==='category'?'category':'mcq'}">${q.type==='mcq'?'Pilihan ganda':q.type==='mcma'?'MCMA':'Kategori'}</span></div><h3>${esc(q.prompt)}</h3>${inputs}<div class="learn-check-actions"><button class="btn btn-primary btn-small" data-grade-check="${key}">Periksa jawaban</button><button class="link-btn" data-reset-check="${key}">Ulangi</button></div><div class="learn-check-feedback" id="feedback-${key}">${old?`<div class="${old.correct?'feedback-good':'feedback-retry'}"><b>${old.correct?'Tepat!':'Belum tepat, coba pelajari lagi.'}</b><br>${esc(q.why)}</div>`:''}</div></article>`;
+    }).join('');
+    ROOT.innerHTML=`<div class="lesson-toolbar"><button class="link-btn" id="backLearning">← Semua materi</button><span>MODUL ${module.number} DARI 04</span><button class="link-btn" id="openStudentStart">Mulai latihan 30 soal →</button></div>
+      <section class="lesson-title-panel"><div class="lesson-number large">${module.number}</div><div><div class="eyebrow" style="color:#b9f0ed">Materi belajar mandiri</div><h1>${esc(module.title)}</h1><p>${esc(module.subtitle)}</p><div class="lesson-meta light"><span>⏱ ${esc(module.duration)}</span><span>📚 ${module.sections.length} bagian materi</span><span>✏️ ${module.checks.length} cek interaktif</span></div></div></section>
+      <section class="lesson-goals"><b>Setelah mempelajari modul ini, kamu diharapkan mampu:</b><ul>${module.goals.map(g=>`<li>${esc(g)}</li>`).join('')}</ul></section>
+      <div class="lesson-content-layout"><nav class="lesson-toc"><b>Daftar isi</b>${module.sections.map((sec,i)=>`<a href="#lesson-section-${i+1}">${i+1}. ${esc(sec.title.replace(/^\d+\.\s*/,''))}</a>`).join('')}<a href="#lesson-checks">Cek pemahaman</a><a href="#lesson-reflection">Refleksi</a></nav><main class="lesson-article">${module.sections.map((sec,i)=>`<section class="lesson-section" id="lesson-section-${i+1}"><h2>${esc(sec.title)}</h2>${sec.body}</section>`).join('')}<section class="lesson-section" id="lesson-checks"><div class="section-heading"><div><h2>Uji pemahamanmu</h2><p>Jawab, periksa hasil, lalu baca alasan atau pembahasannya.</p></div></div>${checkHtml}</section><section class="lesson-section" id="lesson-reflection"><h2>Refleksi cara berpikirmu</h2><p>Gunakan pertanyaan ini untuk memeriksa apakah kamu benar-benar memahami materi.</p><div class="learn-reflection-list">${module.think.map((t,i)=>`<details><summary>${i+1}. ${esc(t)}</summary><p>Coba jawab dengan kalimatmu sendiri dan berikan contoh atau bukti yang mendukung jawabanmu.</p></details>`).join('')}</div><div class="learn-callout"><b>Strategi sebelum menjawab soal TKA:</b> baca teks, temukan kata kunci, cari bukti, periksa semua pilihan sesuai tipe soal, lalu jelaskan alasanmu.</div><button class="btn btn-primary" id="markModuleDone">✓ Tandai modul selesai</button> <span class="tiny" id="moduleDoneText">${state.completed.includes(module.id)?'Modul ini sudah ditandai selesai.':''}</span></section>
+      <div class="lesson-pager"><button class="btn btn-secondary" id="prevModule" ${!prev?'disabled':''}>← Modul sebelumnya</button>${next?`<button class="btn btn-primary" id="nextModule">Modul berikutnya →</button>`:`<button class="btn btn-primary" id="finishLearning">Selesai belajar · mulai 30 soal →</button>`}</div></main></div>`;
+    $('#backLearning').onclick=renderLearningHome;$('#openStudentStart').onclick=renderStudentForm;
+    if(prev)$('#prevModule').onclick=()=>renderLearningModule(prev.id);
+    if(next)$('#nextModule').onclick=()=>renderLearningModule(next.id);else $('#finishLearning').onclick=renderStudentForm;
+    $('#markModuleDone').onclick=()=>{const st=readLearningState();if(!st.completed.includes(module.id))st.completed.push(module.id);writeLearningState(st);$('#moduleDoneText').textContent='Modul ini sudah ditandai selesai.';$('#markModuleDone').textContent='✓ Modul sudah selesai';$('#markModuleDone').classList.remove('btn-primary');$('#markModuleDone').classList.add('btn-secondary');notify('Progres belajar tersimpan pada perangkat ini.');};
+    ROOT.querySelectorAll('[data-grade-check]').forEach(btn=>btn.onclick=()=>gradeLearningCheck(module,Number(btn.dataset.gradeCheck.split('-').pop())));
+    ROOT.querySelectorAll('[data-reset-check]').forEach(btn=>btn.onclick=()=>{const key=btn.dataset.resetCheck;const card=ROOT.querySelector(`[data-check-card="${key}"]`);if(!card)return;card.querySelectorAll('input').forEach(x=>x.checked=false);card.querySelectorAll('select').forEach(x=>x.value='');const feedback=$(`#feedback-${key}`);if(feedback)feedback.innerHTML='';});
+  }
+  function gradeLearningCheck(module,qi){
+    const q=module.checks[qi],key=`${module.id}-${qi}`,card=ROOT.querySelector(`[data-check-card="${key}"]`);if(!card)return;let values=[];
+    if(q.type==='category')values=[...card.querySelectorAll('select[data-check-row]')].sort((a,b)=>Number(a.dataset.checkRow)-Number(b.dataset.checkRow)).map(x=>x.value);
+    else values=[...card.querySelectorAll('input:checked')].map(x=>x.value).sort();
+    if(q.type==='category'&&values.some(v=>!v)){notify('Isi respons untuk setiap pernyataan.');return;}if(q.type==='mcq'&&values.length!==1){notify('Pilih satu jawaban terlebih dahulu.');return;}if(q.type==='mcma'&&values.length===0){notify('Pilih minimal satu jawaban.');return;}
+    const expected=q.answer;const correct=q.type==='category'?values.every((v,i)=>v===expected[i]):values.length===expected.length&&values.every((v,i)=>v===expected[i]);const st=readLearningState();st.checks[key]={correct,at:new Date().toISOString()};writeLearningState(st);
+    const feedback=$(`#feedback-${key}`);feedback.innerHTML=`<div class="${correct?'feedback-good':'feedback-retry'}"><b>${correct?'Tepat! Jawabanmu benar.':'Belum tepat. Baca kembali bukti dalam materi.'}</b><br>${esc(q.why)}${!correct?`<br><b>Petunjuk:</b> ${q.type==='mcma'?'Periksa setiap pilihan secara terpisah.':q.type==='category'?'Nilai setiap pernyataan satu per satu.':'Temukan kalimat yang menjadi bukti.'}`:''}</div>`;
   }
 
   function renderStudentForm(){
     stopTimer();
     ROOT.innerHTML=`<div class="auth-wrap"><section class="auth-card">
       <div class="eyebrow" style="color:#0b8490">Ruang Murid</div><h1>Siap untuk berlatih?</h1><p>Isi identitas sederhana agar guru dapat mengenali hasil latihanmu. Tidak perlu memasukkan alamat email atau tanggal lahir.</p>
+      <div class="learning-note compact"><b>Belum mempelajari materinya?</b><span>Buka empat modul belajar mandiri, pelajari contoh dan cek pemahaman sebelum mengerjakan latihan.</span><button type="button" class="btn btn-secondary btn-small" id="studentStudy">Buka materi belajar</button></div>
       <form id="studentForm">
         <div class="field"><label for="studentName">Nama murid</label><input id="studentName" maxlength="80" required placeholder="Contoh: Nabila Putri" autocomplete="name"></div>
         <div class="field"><label for="studentClass">Kelas</label><input id="studentClass" maxlength="30" required placeholder="Contoh: VI A" value="VI A"></div>
@@ -85,7 +133,7 @@
         <div class="form-footer"><button type="button" class="link-btn" id="backHome">← Kembali</button><button class="btn btn-primary" type="submit">Mulai 30 soal →</button></div>
       </form>
     </section></div>`;
-    $('#backHome').onclick=renderHome;
+    $('#backHome').onclick=renderHome;$('#studentStudy').onclick=renderLearningHome;
     $('#studentForm').onsubmit=e=>{e.preventDefault();const name=$('#studentName').value.trim(),cls=$('#studentClass').value.trim(),code=cloudMode?$('#teacherCode').value.trim():'';if(!name||!cls){notify('Lengkapi nama dan kelas terlebih dahulu.');return;}if(cloudMode&&!code){notify('Masukkan kode guru/kelas.');return;}startQuiz({name,cls,teacherCode:code});};
   }
 
